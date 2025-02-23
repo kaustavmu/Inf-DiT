@@ -67,6 +67,7 @@ def read_from_file(p):
 class ImageDirDataset(Dataset):
     def __init__(self, path, repeat=1):
         self.path = path
+        print(self.path)
         self.images = []
         for root, dirs, files in os.walk(path):
             for file in files:
@@ -75,11 +76,13 @@ class ImageDirDataset(Dataset):
                     self.images.append(os.path.join(root, file))
         self.repeat = repeat
         self.images.sort()
+        print(self.images)
     def __len__(self):
         return len(self.images) * self.repeat
     def __getitem__(self, idx):
         count, idx = idx // len(self.images), idx % len(self.images)
-        lr_path = os.path.join(self.path, self.images[idx])
+        #lr_path = os.path.join(self.path, self.images[idx])
+        lr_path = self.images[idx]
         image = Image.open(lr_path).convert('RGB')
         image = transforms.ToTensor()(image) * 2 - 1
         image_name = self.images[idx].split('.')[0]
@@ -103,6 +106,7 @@ def read_from_path(p, _type):
     else:
         raise NotImplementedError
     dataloader = DataLoader(dataset, batch_size=args.inference_batch_size, shuffle=False, num_workers=4)
+    print(dataloader)
     return dataloader
 
 def main(args, device=torch.device('cuda')):
@@ -112,7 +116,7 @@ def main(args, device=torch.device('cuda')):
     net = get_model(args, DiffusionEngine).to(device)
 
     if args.network is not None:
-        data = torch.load(args.network, map_location='cpu')
+        data = torch.load(args.network, map_location='cpu', weights_only = False)
         net.load_state_dict(data['module'], strict=False)
     print('Loading Fished!')
 
@@ -169,6 +173,7 @@ def main(args, device=torch.device('cuda')):
         images_np = ((samples.to(torch.float64) + 1) * 127.5).clip(0, 255).detach().cpu().permute(0, 2, 3, 1).numpy().astype(np.uint8)
 
         for i, image_np in enumerate(images_np):
+            print('image number', i)
             image_dir = args.out_dir
             text = image_name[i].split('/')[-1]
             os.makedirs(image_dir, exist_ok=True)
@@ -183,7 +188,7 @@ def main(args, device=torch.device('cuda')):
 def add_sample_specific_args(parser):
     group = parser.add_argument_group('Sampling', 'Diffusion Sampling')
     group.add_argument('--network', type=str)
-    group.add_argument('--input-path', type=str, default='input.txt')
+    group.add_argument('--input-path', type=str, default='downsampled/')
     group.add_argument('--out-dir', type=str)
     group.add_argument('--input-type', type=str, help='Choose from ["cli", "txt"]')
     group.add_argument('--num-steps', type=int, default=18)

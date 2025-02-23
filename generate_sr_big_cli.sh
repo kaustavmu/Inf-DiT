@@ -23,7 +23,7 @@ main_dir=$(dirname $script_dir)
 config_json="scripts/ds_config_zero_clip.json"
 
 options=" \
-    --input-type cli \
+    --input-type datapath_dir \
     --inference_type full \
     --block_batch 4 \
     --experiment-name generate \

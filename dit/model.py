@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
+import einops
 from einops import rearrange
 
 from sat.model.base_model import BaseModel
@@ -304,8 +305,11 @@ class AdaLNMixin(BaseMixin):
                 re_pos_embed = origin.re_pos_embed[kw_args['layer_id']].repeat_interleave(key_layer.shape[1] // origin.re_pos_embed.shape[1], dim=0).unsqueeze(0)
                 key_layer = key_layer + re_pos_embed
 
-            context_layer = flash_attn_func(query_layer, key_layer, value_layer)
-
+            #context_layer = flash_attn_func(query_layer, key_layer, value_layer)
+            print(query_layer.shape, key_layer.shape, value_layer.shape)
+            query_layer, key_layer, value_layer = map(lambda t: einops.rearrange(t, 'B S H D -> B H S D'), (query_layer, key_layer, value_layer))
+            context_layer = F.scaled_dot_product_attention(query_layer, key_layer, value_layer)
+            context_layer = einops.rearrange(context_layer, 'B H S D -> B S H D')
             context_layer = inverse_transform(context_layer)
         else:
             query_layer = self._transpose_for_scores(query_layer)
@@ -372,7 +376,10 @@ class AdaLNMixin(BaseMixin):
         query_layer = query_layer + origin.lr_query_position_embedding
         key_layer = key_layer + origin.lr_key_position_embedding
 
-        context_layer = flash_attn_func(query_layer, key_layer, value_layer)
+        #context_layer = flash_attn_func(query_layer, key_layer, value_layer)
+        query_layer, key_layer, value_layer = map(lambda t: einops.rearrange(t, 'B S H D -> B H S D'), (query_layer, key_layer, value_layer))
+        context_layer = F.scaled_dot_product_attention(query_layer, key_layer, value_layer)
+        context_layer = einops.rearrange(context_layer, 'B H S D -> B S H D')
         context_layer = inverse_transform(context_layer)
         # Output. [b, s, h]
         output = self.dense(context_layer)

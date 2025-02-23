@@ -1,5 +1,5 @@
 einops==0.8.0
-flash_attn==2.5.8
+#flash_attn==2.5.8
 kornia==0.7.2
 omegaconf==2.3.0
 open_clip_torch
